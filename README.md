@@ -1,18 +1,18 @@
 # sflow
 A simple and flexible workflow framework, refer to WfMC XPDL model, but process definition with json.
 
-###Framework feature
+### 1. Framework feature
 * Simple definition (process,activity,action,transition)
 * Support process,activity,action(work payload) auto commit (use for robot) 
 * Condition transition support
 * Process participant (user or role) support (TODO)
 
-###Installation
+### 2. Installation
 ```bash
 go get github.com/lizzz49/sflow
 ```
 
-###Process Definition
+### 3. Process Definition
 There are two ways to complete the process definition.
 #### 1.Use process definition SDK
 ```
@@ -117,4 +117,46 @@ process.Publish()
     ],
     "status": 12
 }
+```
+### 4. Registry work payload
+```go
+//package github.com/lizzz49/sflow/samples/def/action
+package action
+
+import (
+	"github.com/lizzz49/sflow"
+	"fmt"
+)
+
+func init(){
+	sflow.RegistryAction("action1",action1)
+}
+func action1(context *sflow.ProcessContext)bool{
+	fmt.Println("1. hello word!")
+	return true
+}
+
+```
+### 5. Run process
+#### Load work payload (action)
+```
+_ "github.com/lizzz49/sflow/samples/def/action"
+```
+#### Run
+```
+pdm := sflow.NewProcessDefinitionManager("pds")
+pim := sflow.NewProcessInstanceManager()
+process,has := pdm.GetProcessDefinitionById("3")
+if !has{
+    println("not process definition found with id: 3")
+    return
+}
+
+pi := pim.CreateProcessInstance(process)
+ctx := make(sflow.ProcessContext)
+ctx["age"] = sflow.Value{Type:sflow.Int64Type,Data:"30"}
+pi.Init(ctx)
+pi.Start()
+//wait for  process finish
+log.Println("express process exit with code:",pi.Waite())
 ```
