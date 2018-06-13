@@ -7,14 +7,47 @@ A simple and flexible workflow framework, refer to WfMC XPDL model, but process 
 * Condition transition support
 * Process participant (user or role) support (TODO)
 
-### 2. Installation
+### 2. Process model support
+#### Line
+```
+   +-------+      +-----------+       +-----------+         +-----+
+   | start +------> activity1 +-------> activity2 +---------> end |
+   +-------+      +-----------+       +-----------+         +-----+
+
+```
+#### Loop
+```
+                    +--------------------+
+                    |                    |
+                    v                    |
++-------+      +----+------+       +-----------+         +-----+
+| start +------> activity1 +-------> activity2 +---------> end |
++-------+      +-----------+       +-----------+         +-----+
+
+```
+#### Split
+```
+                          +-----------+
+                    +---->+ activity2 +------+
+                    |     +-----------+      |
+                    |                        V
++-------+     +-----------+            +-----------+        +-----+
+| start +---->+ activity1 |            | activity4 +--------> end |
++-------+     +-----------+            +-----------+        +-----+
+                    |                        ^
+                    |     +-----------+      |
+                    +---->+ activity3 +------+
+                          +-----------+
+```
+
+### 3. Installation
 ```bash
 go get github.com/lizzz49/sflow
 ```
 
-### 3. Process Definition
+### 4. How to define Process?
 There are two ways to complete the process definition.
-#### 1.Use process definition SDK
+#### Use process definition SDK
 ```
 //sample code in samples/def folder
 //new a process definition manager with save path
@@ -40,7 +73,7 @@ process.AddTransmitDefinition("n2Te",node2.Id,process.EndActivity.Id,pdl.Express
 //publish the process after process definition
 process.Publish()
 ```
-#### 2.Edit json directly
+#### Edit json directly
 ```json
 {
     "id": "3",
@@ -118,7 +151,7 @@ process.Publish()
     "status": 12
 }
 ```
-### 4. Registry work payload
+### 5. How to registry action?
 ```go
 //package github.com/lizzz49/sflow/samples/def/action
 package action
@@ -137,7 +170,7 @@ func action1(context *sflow.ProcessContext)bool{
 }
 
 ```
-### 5. Run process
+### 6. How to Run process?
 #### Load work payload (action)
 ```
 _ "github.com/lizzz49/sflow/samples/def/action"
