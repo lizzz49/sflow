@@ -14,7 +14,7 @@ type ActivityDefinition struct {
 	actionCount int
 }
 
-func newActivityDefinition(id,name string,autoCommit bool)*ActivityDefinition{
+func newActivityDefinition(id, name string, autoCommit bool) *ActivityDefinition {
 	a := &ActivityDefinition{}
 	a.Id = id
 	a.Name = name
@@ -22,9 +22,9 @@ func newActivityDefinition(id,name string,autoCommit bool)*ActivityDefinition{
 	a.Actions = []*ActionDefinition{}
 	return a
 }
-func (a *ActivityDefinition)AddActionDefinition(name,invokerName string,autoCommit bool)*ActionDefinition{
+func (a *ActivityDefinition) AddActionDefinition(name, invokerName string, autoCommit bool) *ActionDefinition {
 	a.actionCount++
-	action := newActionDefinition(fmt.Sprintf("%d",a.actionCount),name,invokerName,autoCommit)
-	a.Actions = append(a.Actions,action)
+	action := newActionDefinition(fmt.Sprintf("%d", a.actionCount), name, invokerName, autoCommit)
+	a.Actions = append(a.Actions, action)
 	return action
 }

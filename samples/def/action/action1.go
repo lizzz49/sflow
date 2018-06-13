@@ -1,14 +1,14 @@
 package action
 
 import (
-	"github.com/lizzz49/sflow"
 	"fmt"
+	"github.com/lizzz49/sflow"
 )
 
-func init(){
-	sflow.RegistryAction("action1",action1)
+func init() {
+	sflow.RegistryAction("action1", action1)
 }
-func action1(context *sflow.ProcessContext)bool{
+func action1(context *sflow.ProcessContext) bool {
 	fmt.Println("1. hello word!")
 	return true
 }
