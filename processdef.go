@@ -19,6 +19,8 @@ const(
 	ActionNotFound = "action [%s] in activity [%s] not found."
 	ProcessLoop = "process has loop,loop way: [%s]"
 
+)
+const(
 	PDNewStatus = iota
 	PDEditingStatus
 	PDDiscardStatus

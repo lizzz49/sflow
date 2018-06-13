@@ -11,7 +11,7 @@ A simple and flexible workflow framework, refer to WfMC XPDL model, but process 
 #### Line
 ```
    +-------+      +-----------+       +-----------+         +-----+
-   | start +------> activity1 +-------> activity2 +---------> end |
+   | start +----->+ activity1 +------>+ activity2 +-------->+ end |
    +-------+      +-----------+       +-----------+         +-----+
 
 ```
@@ -21,7 +21,7 @@ A simple and flexible workflow framework, refer to WfMC XPDL model, but process 
                     |                    |
                     v                    |
 +-------+      +----+------+       +-----------+         +-----+
-| start +------> activity1 +-------> activity2 +---------> end |
+| start +----->+ activity1 +------>+ activity2 +-------->+ end |
 +-------+      +-----------+       +-----------+         +-----+
 
 ```
@@ -30,9 +30,9 @@ A simple and flexible workflow framework, refer to WfMC XPDL model, but process 
                           +-----------+
                     +---->+ activity2 +------+
                     |     +-----------+      |
-                    |                        V
+                    |                        v
 +-------+     +-----------+            +-----------+        +-----+
-| start +---->+ activity1 |            | activity4 +--------> end |
+| start +---->+ activity1 |            | activity4 +------->+ end |
 +-------+     +-----------+            +-----------+        +-----+
                     |                        ^
                     |     +-----------+      |
@@ -148,7 +148,7 @@ process.Publish()
             "always_true": true
         }
     ],
-    "status": 12
+    "status": 3
 }
 ```
 ### 5. How to registry action?

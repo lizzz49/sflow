@@ -68,7 +68,7 @@ func newProcessInstance(id string,def *ProcessDefinition) *ProcessInstance {
 func checkProcessDefinition(p *ProcessDefinition)([]DefError,bool){
 	var des []DefError
 	if p.Status != PDPublishStatus{
-		des = append(des, DefError{ErrMsg: fmt.Sprintf("process [%s] not in published status,status: %d",p.Id,p.Status)})
+		des = append(des, DefError{ErrMsg: fmt.Sprintf("process [%s] not in published [%d] status,status: %d",p.Id,PDPublishStatus,p.Status)})
 	}
 	for _,node:=range p.Activities{
 			for _,action:=range node.Actions {
