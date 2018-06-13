@@ -162,6 +162,6 @@ func (pi *ProcessInstance) Suspend() {
 	pi.status = StatusSuspended
 }
 
-func (pi *ProcessInstance)Waite()int{
+func (pi *ProcessInstance) Wait()int{
 	return <-pi.finish
 }

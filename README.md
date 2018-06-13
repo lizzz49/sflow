@@ -158,5 +158,5 @@ ctx["age"] = sflow.Value{Type:sflow.Int64Type,Data:"30"}
 pi.Init(ctx)
 pi.Start()
 //wait for  process finish
-log.Println("express process exit with code:",pi.Waite())
+log.Println("express process exit with code:",pi.Wait())
 ```
