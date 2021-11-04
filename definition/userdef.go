@@ -1,4 +1,4 @@
-package sflow
+package definition
 
 //TODO user control
 type UserDefinition struct {

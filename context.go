@@ -9,10 +9,7 @@ const (
 type ProcessContext map[string]Value ////string float64 int64 bool struct
 
 type Value struct {
+	Key  string `json:"key"`
 	Type int    `json:"type"`
 	Data string `json:"data"`
-}
-type KeyValue struct {
-	Key   string `json:"key"`
-	Value Value  `json:"value"`
 }

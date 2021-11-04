@@ -1,4 +1,4 @@
-package sflow
+package definition
 
 //TODO role control
 type RoleDefinition struct {

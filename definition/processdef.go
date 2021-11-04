@@ -1,22 +1,21 @@
-package sflow
+package definition
 
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"strconv"
+	"github.com/lizzz49/sflow"
+	"gorm.io/gorm"
 )
 
 const (
 	NotAnyActivityNode = "not any activity node."
 	NotAnyTransmit     = " not any transmit."
-	ActivityHasSameId  = "activity has same id: [%s]"
-	ActivityLoop       = "activity lop: [%s]"
-	ActivityNotFrom    = "activity [%s] not from."
-	ActivityNotTo      = "activity [%s] not to."
-	ActivityNotAction  = "activity [%s] not action definition."
-	ActionNotFound     = "action [%s] in activity [%s] not found."
+	ActivityHasSameId  = "activity has same id: [%d]"
+	ActivityLoop       = "activity lop: [%d]"
+	ActivityNotFrom    = "activity [%d] not from."
+	ActivityNotTo      = "activity [%d] not to."
+	ActivityNotAction  = "activity [%d] not action definition."
+	ActionNotFound     = "action [%s] in activity [%d] not found."
 )
 const (
 	PDNewStatus = iota
@@ -24,42 +23,49 @@ const (
 	PDDiscardStatus
 	PDPublishStatus
 )
+const (
+	ActivityStartId = iota
+	ActivityEndId
+)
 
 type ProcessDefinition struct {
 	Definition
-	StartActivity   ActivityDefinition      `json:"start_activity"`
-	EndActivity     ActivityDefinition      `json:"end_activity"`
-	Activities      []*ActivityDefinition   `json:"activities"`
-	Transitions     []*TransitionDefinition `json:"transitions"`
-	Status          int                     `json:"status"`
-	maxActivityId   int
-	maxTransitionId int
+	StartActivity   ActivityDefinition      `json:"startActivity,omitempty" gorm:"-"`
+	EndActivity     ActivityDefinition      `json:"endActivity,omitempty" gorm:"-"`
+	Activities      []*ActivityDefinition   `json:"activities,omitempty" gorm:"-"`
+	Transitions     []*TransitionDefinition `json:"transitions,omitempty" gorm:"-"`
+	Status          int                     `json:"-" gorm:"column:status;type:int(3);comment:流程状态"`
+	maxActivityId   int                     `gorm:"-"`
+	maxTransitionId int                     `gorm:"-"`
+	JSON            string                  `json:"-" gorm:"column:json;type:text;comment:JSON格式流程定义"`
+	Version         string                  `json:"-" gorm:"column:version;type:varchar(32);comment:版本号"`
 }
 
-func newProcessDefinition(id, name string) *ProcessDefinition {
+func NewProcessDefinition(id int, name string) *ProcessDefinition {
 	pd := &ProcessDefinition{}
 	pd.Id = id
 	pd.Name = name
 	pd.StartActivity = ActivityDefinition{
-		Definition: Definition{"start", "start"},
-		IsStart:    true,
+		Definition: Definition{ActivityStartId, "start"},
+		Type:       sflow.StartActivity,
 	}
 	pd.EndActivity = ActivityDefinition{
-		Definition: Definition{"end", "end"},
-		IsEnd:      true,
+		Definition: Definition{ActivityEndId, "end"},
+		Type:       sflow.EndActivity,
 	}
+	pd.maxActivityId = ActivityEndId
 	return pd
 }
 
 func (p *ProcessDefinition) AddActivityDefinition(name string, autoCommit bool) *ActivityDefinition {
 	p.maxActivityId++
-	a := newActivityDefinition(fmt.Sprintf("%d", p.maxActivityId), name, autoCommit)
+	a := newActivityDefinition(p.maxActivityId, name, autoCommit)
 	p.Activities = append(p.Activities, a)
 	return a
 }
-func (p *ProcessDefinition) AddTransmitDefinition(name, from, to string, exp Express) *TransitionDefinition {
+func (p *ProcessDefinition) AddTransmitDefinition(name string, from, to int, exp Express) *TransitionDefinition {
 	p.maxTransitionId++
-	t := newTransitionDefinition(fmt.Sprintf("%d", p.maxTransitionId), name, from, to, exp)
+	t := newTransitionDefinition(p.maxTransitionId, name, from, to, exp)
 	p.Transitions = append(p.Transitions, t)
 	return t
 }
@@ -79,7 +85,7 @@ func (p *ProcessDefinition) Check() ([]DefError, bool) {
 	if p.Transitions == nil || len(p.Transitions) == 0 {
 		des = append(des, DefError{NotAnyTransmit})
 	}
-	aids := make(map[string]bool)
+	aids := make(map[int]bool)
 	if p.Activities != nil {
 		for _, node := range p.Activities {
 			if aids[node.Id] {
@@ -125,34 +131,31 @@ func (p *ProcessDefinition) Check() ([]DefError, bool) {
 
 func (p *ProcessDefinition) parseMaxId() {
 	for _, a := range p.Activities {
-		aid, _ := strconv.Atoi(a.Id)
+		aid := a.Id
 		if aid > p.maxActivityId {
 			p.maxActivityId = aid
 		}
 		for _, ac := range a.Actions {
-			acid, _ := strconv.Atoi(ac.Id)
+			acid := ac.Id
 			if acid > a.actionCount {
 				a.actionCount = acid
 			}
 		}
 	}
 	for _, t := range p.Transitions {
-		aid, _ := strconv.Atoi(t.Id)
+		aid := t.Id
 		if aid > p.maxActivityId {
 			p.maxActivityId = aid
 		}
 	}
 }
 
-func (p *ProcessDefinition) Save(path string) error {
-	bs, _ := json.MarshalIndent(p, "", "    ")
-	err := ioutil.WriteFile(fmt.Sprintf("%s/%s.pdl", path, p.Id), bs, 0600)
-	if err == nil {
-		log.Println("save prcess [" + p.Id + "] success.")
-	} else {
-		log.Println("save prcess [" + p.Id + "] fail:" + err.Error())
-	}
-	return err
+func (p *ProcessDefinition) Save(db *gorm.DB) error {
+	bs, _ := json.Marshal(p)
+	p.JSON = string(bs)
+	p.Version = "0"
+	rs := db.Model(&ProcessDefinition{}).Create(p)
+	return rs.Error
 }
 
 func (p *ProcessDefinition) Publish() ([]DefError, bool) {
