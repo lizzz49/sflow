@@ -27,6 +27,9 @@ type ProcessInstance struct {
 	ControlBy
 }
 
+func (ProcessInstance) TableName() string {
+	return "sflow_process"
+}
 func checkProcessDefinition(p *definition.ProcessDefinition) ([]definition.DefError, bool) {
 	var des []definition.DefError
 	if p.Status != definition.PDPublishStatus {

@@ -14,6 +14,9 @@ type TransitionInstance struct {
 	Done              bool   `gorm:"column:done;comment:是否满足条件"`
 }
 
+func (TransitionInstance) TableName() string {
+	return "sflow_transition"
+}
 func (t *TransitionInstance) Check() bool {
 	def, err := manager.pdm.GetTransition(t.ProcessDefinition, t.Definition)
 	if err != nil {

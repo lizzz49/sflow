@@ -22,6 +22,9 @@ type ActivityInstance struct {
 	ControlBy
 }
 
+func (ActivityInstance) TableName() string {
+	return "sflow_activity"
+}
 func (ai *ActivityInstance) Start() error {
 	ai.Status = sflow.ProcessInstanceStatusStarted
 	if ai.Type == sflow.StartActivity || ai.Type == sflow.EndActivity {
@@ -52,6 +55,7 @@ func (ai *ActivityInstance) CreateActionInstance(ad *definition.ActionDefinition
 		ProcessId:  ai.ProcessId,
 		ActivityId: ai.Id,
 		Name:       ad.Name,
+		InvokeName: ad.InvokerName,
 		Definition: ad.Id,
 		AutoCommit: ad.AutoCommit,
 		Status:     sflow.ProcessInstanceStatusNew,

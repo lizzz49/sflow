@@ -15,6 +15,7 @@ type ActionInstance struct {
 	ProcessId  int        `gorm:"column:process_id;type:int(11);comment:流程Id"`
 	ActivityId int        `gorm:"column:activity_id;type:int(11);comment:活动Id"`
 	Name       string     `gorm:"column:name;type:varchar(255);comment:实例名称"`
+	InvokeName string     `gorm:"column:name;type:varchar(255);comment:方法名称"`
 	Definition int        `gorm:"column:definition;type:int(11);comment:定义Id"`
 	AutoCommit bool       `gorm:"column:auto_commit;type:int(1);comment:自动提交"`
 	Status     int        `gorm:"column:Status;type:int(3);comment:活动状态"`
@@ -28,6 +29,10 @@ type ActionInstance struct {
 	ControlBy
 }
 
+func (ActionInstance) TableName() string {
+	return "sflow_action"
+}
+
 type ActionData struct {
 	Id         int    //`gorm:"primaryKey;autoIncrement;column:id;type:int(11);comment:数据Id"`
 	ProcessId  int    `gorm:"column:process_id;type:int(11);comment:流程Id"`
@@ -38,6 +43,10 @@ type ActionData struct {
 	Value      string `gorm:"column:value;type:varchar(255);comment:数据值"`
 	ModelTime
 	ControlBy
+}
+
+func (ActionData) TableName() string {
+	return "sflow_action_data"
 }
 
 type ActionInvoker struct {
@@ -70,7 +79,7 @@ func ListActionInvoker() (ais []ActionInvoker) {
 }
 func (ai *ActionInstance) Start() error {
 	ai.Status = sflow.ProcessInstanceStatusStarted
-	invoker, has := GetActionInvoker(ai.Name)
+	invoker, has := GetActionInvoker(ai.InvokeName)
 	if has {
 		invokeFunc := invoker.InvokeFunc
 		context := manager.GetProcessContext(ai.ProcessId)
@@ -79,7 +88,9 @@ func (ai *ActionInstance) Start() error {
 			return manager.FinishAction(ai)
 		}
 	} else {
-		return manager.FinishAction(ai)
+		if ai.AutoCommit {
+			return manager.FinishAction(ai)
+		}
 	}
 	return nil
 }

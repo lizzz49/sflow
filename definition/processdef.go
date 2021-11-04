@@ -41,8 +41,11 @@ type ProcessDefinition struct {
 	Version         string                  `json:"-" gorm:"column:version;type:varchar(32);comment:版本号"`
 }
 
+func (ProcessDefinition) TableName() string {
+	return "sflow_process_def"
+}
 func NewProcessDefinition(id int, name string) *ProcessDefinition {
-	pd := &ProcessDefinition{}
+	pd := &ProcessDefinition{Status: PDNewStatus}
 	pd.Id = id
 	pd.Name = name
 	pd.StartActivity = ActivityDefinition{
