@@ -15,7 +15,7 @@ type ActionInstance struct {
 	ProcessId  int        `gorm:"column:process_id;type:int(11);comment:流程Id"`
 	ActivityId int        `gorm:"column:activity_id;type:int(11);comment:活动Id"`
 	Name       string     `gorm:"column:name;type:varchar(255);comment:实例名称"`
-	InvokeName string     `gorm:"column:name;type:varchar(255);comment:方法名称"`
+	InvokeName string     `gorm:"column:invoke_name;type:varchar(255);comment:方法名称"`
 	Definition int        `gorm:"column:definition;type:int(11);comment:定义Id"`
 	AutoCommit bool       `gorm:"column:auto_commit;type:int(1);comment:自动提交"`
 	Status     int        `gorm:"column:Status;type:int(3);comment:活动状态"`
