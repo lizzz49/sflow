@@ -1,13 +1,13 @@
 package sflow
 
 const (
-	ProcessInstanceStatusNone = iota
-	ProcessInstanceStatusNew
-	ProcessInstanceStatusStarted
-	ProcessInstanceStatusSuspended
-	ProcessInstanceStatusTerminated
-	ProcessInstanceStatusError
-	ProcessInstaneStatusFinish
+	StatusNone = iota
+	StatusNew
+	StatusStarted
+	StatusSuspended
+	StatusTerminated
+	StatusError
+	StatusFinish
 )
 
 const (

@@ -38,22 +38,28 @@ func NewProcessDefinitionManager(db *gorm.DB) *ProcessDefinitionManager {
 	return manager
 }
 
-func (pdm *ProcessDefinitionManager) AddProcessDefinition(name string) *ProcessDefinition {
+func (pdm *ProcessDefinitionManager) AddProcessDefinition(name string, flat bool) *ProcessDefinition {
 	pdm.maxProcessId++
-	pd := NewProcessDefinition(pdm.maxProcessId, name)
+	pd := NewProcessDefinition(pdm.maxProcessId, name, flat)
 	pdm.definitions = append(pdm.definitions, pd)
 	return pd
 }
 
 func (pdm *ProcessDefinitionManager) GetActivity(pid, aid int) (act ActivityDefinition, has bool) {
-	pd, has := pdm.GetProcessDefinitionById(pid)
+	pd, has := pdm.GetProcessDefinition(pid)
 	if !has {
 		return act, has
 	}
 	if aid == 0 {
+		if pd.Flat {
+			has = false
+		}
 		return pd.StartActivity, has
 	}
 	if aid == 1 {
+		if pd.Flat {
+			has = false
+		}
 		return pd.EndActivity, has
 	}
 	has = false
@@ -76,7 +82,7 @@ func (pdm *ProcessDefinitionManager) ListActions(pid, aid int) (xs []*ActionDefi
 }
 
 func (pdm *ProcessDefinitionManager) ListTransitions(pid int) (trs []TransitionDefinition, err error) {
-	pd, has := pdm.GetProcessDefinitionById(pid)
+	pd, has := pdm.GetProcessDefinition(pid)
 	if !has {
 		return trs, fmt.Errorf("process definition %d not found", pid)
 	}
@@ -87,7 +93,7 @@ func (pdm *ProcessDefinitionManager) ListTransitions(pid int) (trs []TransitionD
 }
 
 func (pdm *ProcessDefinitionManager) GetTransition(pid, tid int) (td TransitionDefinition, err error) {
-	pd, has := pdm.GetProcessDefinitionById(pid)
+	pd, has := pdm.GetProcessDefinition(pid)
 	if !has {
 		return td, fmt.Errorf("process definition %d not found", pid)
 	}
@@ -113,7 +119,7 @@ func (pdm *ProcessDefinitionManager) Save() (errs []error) {
 	return
 }
 
-func (pdm *ProcessDefinitionManager) GetProcessDefinitionById(id int) (*ProcessDefinition, bool) {
+func (pdm *ProcessDefinitionManager) GetProcessDefinition(id int) (*ProcessDefinition, bool) {
 	for _, pd := range pdm.definitions {
 		if pd.Id == id {
 			return pd, true

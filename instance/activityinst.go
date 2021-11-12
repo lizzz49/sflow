@@ -26,26 +26,30 @@ func (ActivityInstance) TableName() string {
 	return "sflow_activity"
 }
 func (ai *ActivityInstance) Start() error {
-	ai.Status = sflow.ProcessInstanceStatusStarted
 	if ai.Type == sflow.StartActivity || ai.Type == sflow.EndActivity {
 		return manager.FinishActivity(ai.ProcessId, ai.Id)
 	}
-	xs, _ := manager.pdm.ListActions(ai.ProcessDefinition, ai.Definition)
-	for _, xd := range xs {
+	xds, _ := manager.pdm.ListActions(ai.ProcessDefinition, ai.Definition)
+	var xs []*ActionInstance
+	for _, xd := range xds {
 		action, err := ai.CreateActionInstance(xd)
-		if err != nil {
-
-		} else {
-			action.Start()
+		if err == nil {
+			xs = append(xs, action)
 		}
+	}
+	for _, x := range xs {
+		x.Start()
 	}
 	t := time.Now()
 	rs := manager.db.Model(&ActivityInstance{}).
-		Where("id = ? and process_id = ?", ai.Id, ai.ProcessId).
+		Where("id = ? and process_id = ? and status = ?", ai.Id, ai.ProcessId, sflow.StatusNew).
 		Updates(ActivityInstance{
-			Status:    sflow.ProcessInstanceStatusStarted,
+			Status:    sflow.StatusStarted,
 			StartTime: &t,
 		})
+	if rs.Error == nil {
+		ai.Status = sflow.StatusStarted
+	}
 	return rs.Error
 }
 
@@ -56,11 +60,28 @@ func (ai *ActivityInstance) CreateActionInstance(ad *definition.ActionDefinition
 		ActivityId: ai.Id,
 		Name:       ad.Name,
 		InvokeName: ad.InvokerName,
+		Role: func(xd *definition.ActionDefinition) int {
+			if xd.Role == nil {
+				return -1
+			}
+			return xd.Role.Id
+		}(ad),
+		PreAction: func(xd *definition.ActionDefinition) int {
+			if xd.PreAction == nil {
+				return -1
+			}
+			return xd.PreAction.Id
+		}(ad),
 		Definition: ad.Id,
 		AutoCommit: ad.AutoCommit,
-		Status:     sflow.ProcessInstanceStatusNew,
+		Status:     sflow.StatusNew,
 		CreateTime: t,
-		StartTime:  &t,
+		StartTime: func(xd *definition.ActionDefinition) *time.Time {
+			if xd.PreAction == nil {
+				return &t
+			}
+			return nil
+		}(ad),
 	}
 	rs := manager.db.Model(&ActionInstance{}).Create(a)
 	return a, rs.Error

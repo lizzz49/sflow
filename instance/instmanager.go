@@ -32,7 +32,8 @@ func (pim *ProcessInstanceManager) CreateProcessInstance(name string, def *defin
 		pi = &ProcessInstance{
 			Name:       name,
 			Definition: def.Id,
-			Status:     sflow.ProcessInstanceStatusNew,
+			Status:     sflow.StatusNew,
+			Flat:       def.Flat,
 			CreateTime: time.Now(),
 			StartTime:  nil,
 			FinishTime: nil,
@@ -67,13 +68,13 @@ func (pim *ProcessInstanceManager) TerminateProcessInstance(id int) bool {
 		}
 		return false
 	}
-	if pi.Status == sflow.ProcessInstanceStatusTerminated {
+	if pi.Status == sflow.StatusTerminated {
 		return true
 	}
-	if pi.Status == sflow.ProcessInstanceStatusNew {
-		pi.Status = sflow.ProcessInstanceStatusTerminated
-	} else if pi.Status == sflow.ProcessInstanceStatusStarted || pi.Status == sflow.ProcessInstanceStatusSuspended {
-		pi.Status = sflow.ProcessInstanceStatusTerminated
+	if pi.Status == sflow.StatusNew {
+		pi.Status = sflow.StatusTerminated
+	} else if pi.Status == sflow.StatusStarted || pi.Status == sflow.StatusSuspended {
+		pi.Status = sflow.StatusTerminated
 	}
 	rs := pim.db.Model(&ProcessInstance{}).Update("status", pi.Status)
 	return rs.Error == nil
@@ -121,6 +122,10 @@ func (pim *ProcessInstanceManager) ListActivities(pid int) (acts []ActivityInsta
 }
 func (pim *ProcessInstanceManager) GetActivity(pid, aid int) (act ActivityInstance, err error) {
 	rs := pim.db.Model(&ActivityInstance{}).Where("id = ? and process_id = ?", aid, pid).Take(&act)
+	return act, rs.Error
+}
+func (pim *ProcessInstanceManager) GetActivityByDefinition(pid, adId int) (act ActivityInstance, err error) {
+	rs := pim.db.Model(&ActivityInstance{}).Where("process_id = ? and definition = ?", pid, adId).Take(&act)
 	return act, rs.Error
 }
 func (pim *ProcessInstanceManager) FinishActivity(pid, aid int) error {
@@ -196,15 +201,41 @@ func (pim *ProcessInstanceManager) GetProcessContext(pid int) (ctx sflow.Process
 }
 
 func (pim *ProcessInstanceManager) FinishAction(x *ActionInstance) error {
-	x.Status = sflow.ProcessInstaneStatusFinish
+	if x.Status != sflow.StatusStarted {
+		return fmt.Errorf("action %d status error: %d", x.Id, x.Status)
+	}
+	//finish action
 	t := time.Now()
 	rs := manager.db.Model(&ActionInstance{}).Where("id = ? and process_id=? and activity_id = ?", x.Id, x.ProcessId, x.ActivityId).Updates(ActionInstance{
-		Status:     sflow.ProcessInstaneStatusFinish,
+		Status:     sflow.StatusFinish,
 		FinishTime: &t,
 	})
 	if rs.Error != nil {
 		return rs.Error
 	}
+	x.Status = sflow.StatusFinish
+	//check pre action
+	xs, err := pim.ListActions(x.ProcessId, x.ActivityId)
+	if err != nil {
+		return err
+	}
+	var nexts []int
+	for _, n := range xs {
+		if n.PreAction == x.Definition {
+			nexts = append(nexts, n.Id)
+		}
+	}
+	rs = pim.db.Model(&ActionInstance{}).
+		Where("process_id = ? and activity_id = ? and id in (?)", x.ProcessId, x.ActivityId, nexts).
+		Updates(ActionInstance{
+			Status:    sflow.StatusStarted,
+			StartTime: &t,
+		})
+	if rs.Error != nil {
+		return rs.Error
+	}
+	//Todo notify participant
+	//check finish activity
 	ai, err := pim.GetActivity(x.ProcessId, x.ActivityId)
 	if rs.Error != nil {
 		return rs.Error
@@ -213,12 +244,8 @@ func (pim *ProcessInstanceManager) FinishAction(x *ActionInstance) error {
 		return nil
 	}
 	allFinish := true
-	xs, err := pim.ListActions(x.ProcessId, x.ActivityId)
-	if err != nil {
-		return err
-	}
 	for _, action := range xs {
-		if action.Status != sflow.ProcessInstaneStatusFinish {
+		if action.Status != sflow.StatusFinish {
 			allFinish = false
 			break
 		}

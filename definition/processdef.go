@@ -30,22 +30,25 @@ const (
 
 type ProcessDefinition struct {
 	Definition
-	StartActivity   ActivityDefinition      `json:"startActivity,omitempty" gorm:"-"`
-	EndActivity     ActivityDefinition      `json:"endActivity,omitempty" gorm:"-"`
-	Activities      []*ActivityDefinition   `json:"activities,omitempty" gorm:"-"`
-	Transitions     []*TransitionDefinition `json:"transitions,omitempty" gorm:"-"`
-	Status          int                     `json:"-" gorm:"column:status;type:int(3);comment:流程状态"`
-	maxActivityId   int                     `gorm:"-"`
-	maxTransitionId int                     `gorm:"-"`
-	JSON            string                  `json:"-" gorm:"column:json;type:text;comment:JSON格式流程定义"`
-	Version         string                  `json:"-" gorm:"column:version;type:varchar(32);comment:版本号"`
+	StartActivity ActivityDefinition      `json:"startActivity,omitempty" gorm:"-"`
+	EndActivity   ActivityDefinition      `json:"endActivity,omitempty" gorm:"-"`
+	Activities    []*ActivityDefinition   `json:"activities,omitempty" gorm:"-"`
+	Transitions   []*TransitionDefinition `json:"transitions,omitempty" gorm:"-"`
+	//所有满足条件的节点同时创建，节点的条件为前置节点是否完成，
+	//flat=true时transition将失效，开始和结束节点也将失效，流程只能手工结束
+	Flat            bool   `json:"flat,omitempty" gorm:"comment:创建所有活动节点"`
+	Status          int    `json:"-" gorm:"column:status;type:int(3);comment:流程状态"`
+	JSON            string `json:"-" gorm:"column:json;type:text;comment:JSON格式流程定义"`
+	Version         string `json:"-" gorm:"column:version;type:varchar(32);comment:版本号"`
+	maxActivityId   int    `gorm:"-"`
+	maxTransitionId int    `gorm:"-"`
 }
 
 func (ProcessDefinition) TableName() string {
 	return "sflow_process_def"
 }
-func NewProcessDefinition(id int, name string) *ProcessDefinition {
-	pd := &ProcessDefinition{Status: PDNewStatus}
+func NewProcessDefinition(id int, name string, flat bool) *ProcessDefinition {
+	pd := &ProcessDefinition{Status: PDNewStatus, Flat: flat}
 	pd.Id = id
 	pd.Name = name
 	pd.StartActivity = ActivityDefinition{
@@ -60,9 +63,9 @@ func NewProcessDefinition(id int, name string) *ProcessDefinition {
 	return pd
 }
 
-func (p *ProcessDefinition) AddActivityDefinition(name string, autoCommit bool) *ActivityDefinition {
+func (p *ProcessDefinition) AddActivityDefinition(name string, autoCommit bool, pre *ActivityDefinition) *ActivityDefinition {
 	p.maxActivityId++
-	a := newActivityDefinition(p.maxActivityId, name, autoCommit)
+	a := newActivityDefinition(p.maxActivityId, name, autoCommit, pre)
 	p.Activities = append(p.Activities, a)
 	return a
 }
@@ -85,7 +88,7 @@ func (p *ProcessDefinition) Check() ([]DefError, bool) {
 	if p.Activities == nil || len(p.Activities) == 0 {
 		des = append(des, DefError{NotAnyActivityNode})
 	}
-	if p.Transitions == nil || len(p.Transitions) == 0 {
+	if !p.Flat && (p.Transitions == nil || len(p.Transitions) == 0) {
 		des = append(des, DefError{NotAnyTransmit})
 	}
 	aids := make(map[int]bool)

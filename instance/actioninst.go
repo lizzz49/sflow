@@ -16,9 +16,11 @@ type ActionInstance struct {
 	ActivityId int        `gorm:"column:activity_id;type:int(11);comment:活动Id"`
 	Name       string     `gorm:"column:name;type:varchar(255);comment:实例名称"`
 	InvokeName string     `gorm:"column:invoke_name;type:varchar(255);comment:方法名称"`
+	Role       int        `gorm:"column:role;type:int(11);comment:可操作角色"`
+	PreAction  int        `gorm:"column:pre_action;type:int(11);comment:前置动作"`
 	Definition int        `gorm:"column:definition;type:int(11);comment:定义Id"`
 	AutoCommit bool       `gorm:"column:auto_commit;type:int(1);comment:自动提交"`
-	Status     int        `gorm:"column:Status;type:int(3);comment:活动状态"`
+	Status     int        `gorm:"column:Status;type:int(3);comment:动作状态"`
 	CreateTime time.Time  `gorm:"column:create_time;comment:活动创建时间"`
 	StartTime  *time.Time `gorm:"column:start_time;comment:活动启动时间"`
 	FinishTime *time.Time `gorm:"column:finish_time;comment:活动完成时间"`
@@ -78,12 +80,28 @@ func ListActionInvoker() (ais []ActionInvoker) {
 	return
 }
 func (ai *ActionInstance) Start() error {
-	ai.Status = sflow.ProcessInstanceStatusStarted
+	if ai.PreAction != -1 && ai.Status != sflow.StatusStarted {
+		return nil
+	}
+	if ai.Status != sflow.StatusNew && ai.Status != sflow.StatusStarted {
+		return nil
+	}
+	if ai.Status == sflow.StatusNew {
+		rs := manager.db.Model(&ActionInstance{}).
+			Where("id = ? and process_id = ? and activity_id = ?", ai.Id, ai.ProcessId, ai.ActivityId).
+			Updates(ActionInstance{
+				Status: sflow.StatusStarted,
+			})
+		if rs.Error != nil {
+			return rs.Error
+		}
+		ai.Status = sflow.StatusStarted
+	}
 	invoker, has := GetActionInvoker(ai.InvokeName)
 	if has {
 		invokeFunc := invoker.InvokeFunc
-		context := manager.GetProcessContext(ai.ProcessId)
-		invokeFunc(&context, ai, []sflow.Value{})
+		//context := manager.GetProcessContext(ai.ProcessId)
+		invokeFunc(nil, ai, []sflow.Value{})
 		if ai.AutoCommit {
 			return manager.FinishAction(ai)
 		}
